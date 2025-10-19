@@ -1,13 +1,15 @@
 package dogapi;
 
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.util.*;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 /**
  * BreedFetcher implementation that relies on the dog.ceo API.
@@ -25,11 +27,38 @@ public class DogApiBreedFetcher implements BreedFetcher {
      */
     @Override
     public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+        String url = "https://dog.ceo/api/breed/" + breed + "/list";
+        
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new BreedNotFoundException(breed);
+            }
+            
+            String responseBody = response.body().string();
+            JSONObject jsonResponse = new JSONObject(responseBody);
+            
+            // Check if the API returned an error status
+            if ("error".equals(jsonResponse.getString("status"))) {
+                throw new BreedNotFoundException(breed);
+            }
+            
+            // Extract the sub-breeds list
+            JSONArray messageArray = jsonResponse.getJSONArray("message");
+            List<String> subBreeds = new ArrayList<>();
+            
+            for (int i = 0; i < messageArray.length(); i++) {
+                subBreeds.add(messageArray.getString(i));
+            }
+            
+            return subBreeds;
+            
+        } catch (IOException e) {
+            // Any network or parsing errors should result in BreedNotFoundException
+            throw new BreedNotFoundException(breed);
+        }
     }
 }
